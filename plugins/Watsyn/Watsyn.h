@@ -57,24 +57,24 @@ namespace lmms
 #define B2ROW 95
 
 
-const int GRAPHLEN = 220; // don't change - must be same as the size of the widget
+constexpr int GRAPHLEN = 220; // don't change - must be same as the size of the widget
 
-const int WAVERATIO = 32; // oversampling ratio
+constexpr int WAVERATIO = 32; // oversampling ratio
 
-const int WAVELEN = GRAPHLEN * WAVERATIO;
-const int PMOD_AMT = WAVELEN / 2;
+constexpr int WAVELEN = GRAPHLEN * WAVERATIO;
+constexpr int PMOD_AMT = WAVELEN / 2;
 
-const int	MOD_MIX = 0;
-const int	MOD_AM = 1;
-const int	MOD_RM = 2;
-const int	MOD_PM = 3;
-const int  NUM_MODS = 4;
+constexpr int MOD_MIX  = 0;
+constexpr int MOD_AM   = 1;
+constexpr int MOD_RM   = 2;
+constexpr int MOD_PM   = 3;
+constexpr int NUM_MODS = 4;
 
-const int	A1_OSC = 0;
-const int	A2_OSC = 1;
-const int	B1_OSC = 2;
-const int	B2_OSC = 3;
-const int	NUM_OSCS = 4;
+constexpr int A1_OSC   = 0;
+constexpr int A2_OSC   = 1;
+constexpr int B1_OSC   = 2;
+constexpr int B2_OSC   = 3;
+constexpr int NUM_OSCS = 4;
 
 class WatsynInstrument;
 
