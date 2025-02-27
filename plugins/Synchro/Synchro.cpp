@@ -2,7 +2,7 @@
 #include "AudioEngine.h"
 #include "Engine.h"
 #include "InstrumentTrack.h"
-// #include "lmms_math.h"
+#include "lmms_math.h"
 #include "embed.h"
 #include "plugin_export.h"
 
@@ -14,8 +14,104 @@ namespace // constants used by both Synchro and SynchroView
 	inline constexpr auto MAX_ENV_MS = 1000;
 }
 
-namespace // math stuff
-{}
+namespace
+{
+using namespace std::numbers;
+using std::floating_point;
+using lmms::wrap;
+
+// TODO C++23: Make constexpr since std::floor() and std::abs() will be constexpr
+// This function is written with generics since it should be moved to
+// a more common location and used by other parts of the code that
+// currently just re-implement this exact thing.
+//! @brief Triangle waveform function
+template<auto period = 2 * pi, auto phase_offset = 0.25, floating_point T>
+inline auto tri(T phase) noexcept
+{
+	constexpr auto offset = static_cast<T>(period * phase_offset);
+	constexpr auto scale = static_cast<T>(2 / period);
+	return 1 - 2 * std::abs(scale * wrap<period>(phase + offset) - 1);
+}
+
+// TODO C++23: Make constexpr since std::floor() and std::abs() will be constexpr
+/**
+ * @brief Psuedo-sine waveform function
+ *
+ * This function generates a sine-like waveform. It has a maximum error
+ * of ±5.6%, which is quite large, so it is primarily intended for use
+ * in oscillators where this error does not matter.
+ */
+template<auto period = 2 * pi, floating_point T>
+inline auto psin(T phase) noexcept
+{
+	const auto p = 4 * wrap<period>(phase) - 2;
+	return p * (std::abs(p) - 2);
+}
+
+// TODO C++26: Make constexpr since std::exp() and std::pow() will be constexpr
+/**
+ * @brief Cursed multipurpose waveshaping function
+ *
+ * This function first applies saturation to the input, then attenuates
+ * it an amount proportional to the waveform phase relative to the
+ * waveform period.
+ *
+ * magic(sin(x), x, pulse, drive)
+ *
+ * @tparam period The maximum input phase of the oscillator used to generate @p value
+ * @param value The value to saturate, which should be the output of the waveform
+ * @param phase The input phase used to generate @p value. Should be <= @p period
+ */
+template<auto period = 2 * pi>
+inline auto magic(
+	floating_point auto value,
+	floating_point auto phase,
+	floating_point auto pulse,
+	floating_point auto drive
+) noexcept
+{
+	const auto p = phase / period;
+	const auto phase_rev = period - phase;
+	// TODO C++23: [[assume(x >= 0, drive >= 0, p >= 0, phase_rev >= 0)]]
+	drive *= 2;
+	const auto a = std::exp(value * drive);
+	const auto b = std::exp(drive);
+	return std::pow(phase_rev, pulse) * ((a - 1) * (b + 1)) / ((a + 1) * (b - 1));
+}
+
+// TODO C++26: Make constexpr since psin() and magic() will be constexpr
+//! @brief Synchro carrier waveform function
+template<auto period = 2 * pi>
+inline auto carrier(
+	floating_point auto phase,
+	floating_point auto sync,
+	floating_point auto pulse,
+	floating_point auto drive
+) noexcept
+{
+	return magic(psin(phase * sync), phase, pulse, drive);
+}
+
+// TODO C++26: Make constexpr since psin() and magic() will be constexpr
+//! @brief Synchro modulator waveform function
+template<auto period = 2 * pi>
+inline auto modulator(
+	floating_point auto phase,
+	floating_point auto sync,
+	floating_point auto pulse,
+	floating_point auto drive,
+	floating_point auto grit
+) noexcept
+{
+	const auto p = phase * sync;
+	// The harmonic values and their amplitudes are arbitrary and found
+	// through manual experimentation. If there better-sounding
+	// numbers, please update them.
+	const auto harmonics = .5f * tri(p * 32) + .03f * tri(p * 38);
+	return magic(tri(p) + harmonics * grit, phase, pulse, drive);
+}
+
+}
 
 namespace lmms
 {
