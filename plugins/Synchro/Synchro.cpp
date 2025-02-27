@@ -123,7 +123,7 @@ extern "C"
 		return new Synchro(static_cast<InstrumentTrack*>(m));
 	}
 
-	const Plugin::Descriptor PLUGIN_EXPORT SYNCHRO_PLUGIN_DESCRIPTOR =
+	Plugin::Descriptor PLUGIN_EXPORT synchro_plugin_descriptor =
 	{
 		LMMS_STRINGIFY(PLUGIN_NAME),
 		"Synchro",
@@ -138,7 +138,7 @@ extern "C"
 
 // TODO #7623: Use continuous stepsize instead of .00001f
 Synchro::Synchro(InstrumentTrack *track) :
-	Instrument(track, &SYNCHRO_PLUGIN_DESCRIPTOR, nullptr, Flag::IsSingleStreamed),
+	Instrument(track, &synchro_plugin_descriptor, nullptr, Flag::IsSingleStreamed),
 	m_oversamplingFactor(2),
 	m_modulation(0, 0, 1, .00001f, this, tr("Modulation amount")),
 	m_modulationScale(1, -2, 2, .25f, this, tr("Modulation scale")),
@@ -203,7 +203,7 @@ void Synchro::play(SampleFrame buf[])
 
 gui::PluginView *Synchro::instantiateView(QWidget *parent) { return new gui::SynchroView(this, parent); }
 
-QString Synchro::nodeName() const { return SYNCHRO_PLUGIN_DESCRIPTOR.displayName; }
+QString Synchro::nodeName() const { return synchro_plugin_descriptor.displayName; }
 
 void Synchro::saveSettings(QDomDocument &doc, QDomElement &parent)
 {
@@ -274,7 +274,10 @@ namespace lmms::gui
 SynchroView::SynchroView(Instrument *instrument, QWidget *parent) :
 	InstrumentViewFixedSize(instrument, parent)
 {
-	// TODO
+	setAutoFillBackground(true);
+	QPalette p;
+	// p.setBrush(backgroundRole(), PLUGIN_NAME::getIconPixmap("artwork"));
+	setPalette(p);
 }
 
 void SynchroView::modelChanged()
