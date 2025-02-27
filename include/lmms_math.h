@@ -71,8 +71,7 @@ template<auto y = 2 * pi, std::floating_point T>
 inline auto wrap(T x) noexcept
 {
 	constexpr auto y_inv = static_cast<T>(1.0 / y);
-	// return x - y * std::floor(x * y_inv);
-	return std::fma(-y, std::floor(x * y_inv), x);
+	return x - y * std::floor(x * y_inv);
 }
 
 // TODO C++23: Make constexpr since std::trunc() will be constexpr
