@@ -42,11 +42,37 @@
 
 namespace lmms
 {
+using namespace std::numbers;
 
 // TODO C++23: Make constexpr since std::abs() will be constexpr
 inline bool approximatelyEqual(float x, float y) noexcept
 {
 	return x == y || std::abs(x - y) < F_EPSILON;
+}
+
+// TODO C++23: Make constexpr since std::floor() will be constexpr
+/**
+ * @brief Performs floored remainder division, or x - y * ⌊x / y⌋.
+ *
+ * This function serves a purpose similar to fmod, but the remainder
+ * will always have the same sign as the divisor (y) and be in the range
+ * from [0, y). Its primary purpose is mapping arbitrary input phases
+ * to their equivalents within [0, y) for waveform functions that
+ * cannot accept phases outside that domain.
+ *
+ * @f$x-y\biggl\lfloor\frac{x}{y}\biggr\rfloor@f$
+ *
+ * When the divisor (y) is +1.0, this is equivalent to absFraction(x),
+ * which may be preferable.
+ *
+ * @see absFraction
+ */
+template<auto y = 2 * pi, std::floating_point T>
+inline auto wrap(T x) noexcept
+{
+	constexpr auto y_inv = static_cast<T>(1.0 / y);
+	// return x - y * std::floor(x * y_inv);
+	return std::fma(-y, std::floor(x * y_inv), x);
 }
 
 // TODO C++23: Make constexpr since std::trunc() will be constexpr
@@ -151,7 +177,6 @@ inline float signedPowf(float v, float e)
 //! Value should be within [0,1]
 inline float logToLinearScale(float min, float max, float value)
 {
-	using namespace std::numbers;
 	if (min < 0)
 	{
 		const float mmax = std::max(std::abs(min), std::abs(max));
@@ -167,7 +192,7 @@ inline float logToLinearScale(float min, float max, float value)
 //! @brief Scales value from logarithmic to linear. Value should be in min-max range.
 inline float linearToLogScale(float min, float max, float value)
 {
-	constexpr auto inv_e = static_cast<float>(1.0 / std::numbers::e);
+	constexpr auto inv_e = static_cast<float>(1.0 / e);
 	const float valueLimited = std::clamp(value, min, max);
 	const float val = (valueLimited - min) / (max - min);
 	if (min < 0)
@@ -184,19 +209,19 @@ inline float linearToLogScale(float min, float max, float value)
 template<std::floating_point T>
 inline auto fastPow10f(T x)
 {
-	return std::exp(std::numbers::ln10_v<T> * x);
+	return std::exp(ln10_v<T> * x);
 }
 
 // TODO C++26: Make constexpr since std::exp() will be constexpr
 inline auto fastPow10f(std::integral auto x)
 {
-	return std::exp(std::numbers::ln10_v<float> * x);
+	return std::exp(ln10_v<float> * x);
 }
 
 // TODO C++26: Make constexpr since std::log() will be constexpr
 inline auto fastLog10f(float x)
 {
-	constexpr auto inv_ln10 = static_cast<float>(1.0 / std::numbers::ln10);
+	constexpr auto inv_ln10 = static_cast<float>(1.0 / ln10);
 	return std::log(x) * inv_ln10;
 }
 
