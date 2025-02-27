@@ -1,7 +1,8 @@
 #include "Synchro.h"
-#include <qboxlayout.h>
-#include <qlabel.h>
-#include <qnamespace.h>
+#include <QDomElement>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+#include <QLabel>
 #include "AudioEngine.h"
 #include "Engine.h"
 #include "InstrumentTrack.h"
@@ -208,19 +209,55 @@ gui::PluginView *Synchro::instantiateView(QWidget *parent) { return new gui::Syn
 
 QString Synchro::nodeName() const { return synchro_plugin_descriptor.displayName; }
 
-void Synchro::saveSettings(QDomDocument &doc, QDomElement &parent)
+void Synchro::saveSettings(QDomDocument &doc, QDomElement &thisElement)
 {
-	// TODO
+	thisElement.setAttribute("version", synchro_plugin_descriptor.version);
+	m_modulationScale.saveSettings(doc, thisElement, "Modulation scale");
+	m_glideTime.saveSettings(doc, thisElement, "Glide time");
+	m_carrierDrive.saveSettings(doc, thisElement, "Carrier drive");
+	m_carrierSync.saveSettings(doc, thisElement, "Carrier sync");
+	m_carrierPulse.saveSettings(doc, thisElement, "Carrier pulse");
+	m_carrierAttack.saveSettings(doc, thisElement, "Carrier attack");
+	m_carrierDecay.saveSettings(doc, thisElement, "Carrier decay");
+	m_carrierSustain.saveSettings(doc, thisElement, "Carrier sustain");
+	m_carrierRelease.saveSettings(doc, thisElement, "Carrier release");
+	m_modulatorDrive.saveSettings(doc, thisElement, "Modulator drive");
+	m_modulatorSync.saveSettings(doc, thisElement, "Modulator sync");
+	m_modulatorPulse.saveSettings(doc, thisElement, "Modulator pulse");
+	m_modulatorGrit.saveSettings(doc, thisElement, "Modulator grit");
+	m_modulatorOctave.saveSettings(doc, thisElement, "Modulator octave");
+	m_modulatorAttack.saveSettings(doc, thisElement, "Modulator attack");
+	m_modulatorDecay.saveSettings(doc, thisElement, "Modulator decay");
+	m_modulatorSustain.saveSettings(doc, thisElement, "Modulator sustain");
+	m_modulatorRelease.saveSettings(doc, thisElement, "Modulator release");
 }
 
 void Synchro::loadSettings(const QDomElement &thisElement)
 {
-	// TODO
+	// TODO: check if preset version is same as plugin version
+	m_modulationScale.loadSettings(thisElement, "Modulation scale");
+	m_glideTime.loadSettings(thisElement, "Glide time");
+	m_carrierDrive.loadSettings(thisElement, "Carrier drive");
+	m_carrierSync.loadSettings(thisElement, "Carrier sync");
+	m_carrierPulse.loadSettings(thisElement, "Carrier pulse");
+	m_carrierAttack.loadSettings(thisElement, "Carrier attack");
+	m_carrierDecay.loadSettings(thisElement, "Carrier decay");
+	m_carrierSustain.loadSettings(thisElement, "Carrier sustain");
+	m_carrierRelease.loadSettings(thisElement, "Carrier release");
+	m_modulatorDrive.loadSettings(thisElement, "Modulator drive");
+	m_modulatorSync.loadSettings(thisElement, "Modulator sync");
+	m_modulatorPulse.loadSettings(thisElement, "Modulator pulse");
+	m_modulatorGrit.loadSettings(thisElement, "Modulator grit");
+	m_modulatorOctave.loadSettings(thisElement, "Modulator octave");
+	m_modulatorAttack.loadSettings(thisElement, "Modulator attack");
+	m_modulatorDecay.loadSettings(thisElement, "Modulator decay");
+	m_modulatorSustain.loadSettings(thisElement, "Modulator sustain");
+	m_modulatorRelease.loadSettings(thisElement, "Modulator release");
 }
 
 void Synchro::effectiveSampleRateChanged()
 {
-	// TODO
+	m_buf.resize(2 * framesPerPeriod());
 }
 
 void Synchro::carrierOscChanged()
@@ -282,17 +319,17 @@ SynchroView::SynchroView(Instrument *instrument, QWidget *parent) :
 	// p.setBrush(backgroundRole(), PLUGIN_NAME::getIconPixmap("artwork"));
 	setPalette(p);
 
-	auto makeKnob = [this](Knob*& m, const QString& label, const QString& txt_before, const QString& txt_after, QLayout* layout, Qt::Alignment align = Qt::AlignLeading | Qt::AlignVCenter)
+	auto makeKnob = [this](Knob*& m, const QString& label, const QString& txt_before, const QString& txt_after, QLayout* layout)
 	{
 		m = new Knob(KnobType::Dark28, this);
 		m->setHintText(txt_before, txt_after);
 		m->setLabel(label);
 		layout->addWidget(m);
-		layout->setAlignment(m, align);
 	};
 
-	auto makeRow = []() {
+	auto makeRow = [](Qt::Alignment align = Qt::AlignLeading | Qt::AlignVCenter) {
 		auto row = new QHBoxLayout();
+		row->setAlignment(align);
 		row->setContentsMargins(0, 0, 0, 0);
 		row->setSpacing(10);
 		return row;
@@ -334,10 +371,11 @@ SynchroView::SynchroView(Instrument *instrument, QWidget *parent) :
 	makeKnob(m_modulatorRelease, tr("release"), tr("modulator release"), "ms", modulatorEnvLayout);
 	modulatorEnvLayout->addStretch();
 
-
+	auto label = new QLabel(tr("Synchro"), this);
+	layout->addWidget(label);
 	layout->addLayout(commonLayout);
 	layout->addSpacing(8);
-	auto label = new QLabel(tr("Carrier Oscillator"), this);
+	label = new QLabel(tr("Carrier Oscillator"), this);
 	layout->addWidget(label);
 	layout->addLayout(carrierOscLayout);
 	layout->addLayout(carrierEnvLayout);

@@ -20,7 +20,7 @@ public:
 	void play(SampleFrame buf[]) override;
 	gui::PluginView *instantiateView(QWidget *parent) override;
 	QString nodeName() const override;
-	void saveSettings(QDomDocument &doc, QDomElement &parent) override;
+	void saveSettings(QDomDocument &doc, QDomElement &thisElement) override;
 	void loadSettings(const QDomElement &thisElement) override;
 protected slots:
 	void effectiveSampleRateChanged();
