@@ -57,12 +57,12 @@ private:
 	FloatModel m_modulatorRelease;
 };
 
-class gui::SynchroView : public InstrumentViewFixedSize
+class gui::SynchroView : public InstrumentView
 {
 Q_OBJECT
 public:
 	SynchroView(Instrument *instrument, QWidget *parent);
-	QSize sizeHint() const override { return QSize(480, 360); }
+	// QSize sizeHint() const override { return QSize(500, 375); }
 protected slots:
 	void modelChanged() override;
 private:

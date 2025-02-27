@@ -1,4 +1,7 @@
 #include "Synchro.h"
+#include <qboxlayout.h>
+#include <qlabel.h>
+#include <qnamespace.h>
 #include "AudioEngine.h"
 #include "Engine.h"
 #include "InstrumentTrack.h"
@@ -272,12 +275,77 @@ namespace lmms::gui
 {
 
 SynchroView::SynchroView(Instrument *instrument, QWidget *parent) :
-	InstrumentViewFixedSize(instrument, parent)
+	InstrumentView(instrument, parent)
 {
 	setAutoFillBackground(true);
 	QPalette p;
 	// p.setBrush(backgroundRole(), PLUGIN_NAME::getIconPixmap("artwork"));
 	setPalette(p);
+
+	auto makeKnob = [this](Knob*& m, const QString& label, const QString& txt_before, const QString& txt_after, QLayout* layout, Qt::Alignment align = Qt::AlignLeading | Qt::AlignVCenter)
+	{
+		m = new Knob(KnobType::Dark28, this);
+		m->setHintText(txt_before, txt_after);
+		m->setLabel(label);
+		layout->addWidget(m);
+		layout->setAlignment(m, align);
+	};
+
+	auto makeRow = []() {
+		auto row = new QHBoxLayout();
+		row->setContentsMargins(0, 0, 0, 0);
+		row->setSpacing(10);
+		return row;
+	};
+
+	auto layout = new QVBoxLayout(this);
+	auto commonLayout = makeRow();
+	auto carrierOscLayout = makeRow();
+	auto carrierEnvLayout = makeRow();
+	auto modulatorOscLayout = makeRow();
+	auto modulatorEnvLayout = makeRow();
+
+	makeKnob(m_modulation, tr("mod"), tr("modulation"), "×", commonLayout);
+	makeKnob(m_modulationScale, tr("scale"), tr("modulation scale"), "×", commonLayout);
+	makeKnob(m_glideTime, tr("glide"), tr("glide time"), "ms", commonLayout);
+	commonLayout->addStretch();
+	
+	makeKnob(m_carrierDrive, tr("drive"), tr("carrier drive"), "×", carrierOscLayout);
+	makeKnob(m_carrierSync, tr("sync"), tr("carrier sync"), "×", carrierOscLayout);
+	makeKnob(m_carrierPulse, tr("pulse"), tr("carrier pulse"), "", carrierOscLayout);
+	carrierOscLayout->addStretch();
+
+	makeKnob(m_carrierAttack, tr("attack"), tr("carrier attack"), "ms", carrierEnvLayout);
+	makeKnob(m_carrierDecay, tr("decay"), tr("carrier decay"), "ms", carrierEnvLayout);
+	makeKnob(m_carrierSustain, tr("sustain"), tr("carrier sustain"), "ms", carrierEnvLayout);
+	makeKnob(m_carrierRelease, tr("release"), tr("carrier release"), "ms", carrierEnvLayout);
+	carrierEnvLayout->addStretch();
+
+	makeKnob(m_modulatorDrive, tr("drive"), tr("modulator drive"), "×", modulatorOscLayout);
+	makeKnob(m_modulatorSync, tr("sync"), tr("modulator sync"), "×", modulatorOscLayout);
+	makeKnob(m_modulatorPulse, tr("pulse"), tr("modulator pulse"), "", modulatorOscLayout);
+	makeKnob(m_modulatorGrit, tr("grit"), tr("modulator grit"), "×", modulatorOscLayout);
+	makeKnob(m_modulatorOctave, tr("octave"), tr("modulator octave"), tr("octaves"), modulatorOscLayout);
+	modulatorOscLayout->addStretch();
+
+	makeKnob(m_modulatorAttack, tr("attack"), tr("modulator attack"), "ms", modulatorEnvLayout);
+	makeKnob(m_modulatorDecay, tr("decay"), tr("modulator decay"), "ms", modulatorEnvLayout);
+	makeKnob(m_modulatorSustain, tr("sustain"), tr("modulator sustain"), "ms", modulatorEnvLayout);
+	makeKnob(m_modulatorRelease, tr("release"), tr("modulator release"), "ms", modulatorEnvLayout);
+	modulatorEnvLayout->addStretch();
+
+
+	layout->addLayout(commonLayout);
+	layout->addSpacing(8);
+	auto label = new QLabel(tr("Carrier Oscillator"), this);
+	layout->addWidget(label);
+	layout->addLayout(carrierOscLayout);
+	layout->addLayout(carrierEnvLayout);
+	layout->addSpacing(8);
+	label = new QLabel(tr("Modulator Oscillator"), this);
+	layout->addWidget(label);
+	layout->addLayout(modulatorOscLayout);
+	layout->addLayout(modulatorEnvLayout);
 }
 
 void SynchroView::modelChanged()
