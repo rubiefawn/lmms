@@ -29,7 +29,6 @@
  */
 
 // Need to include this first to ensure we get M_PI in MinGW with C++11
-#define _USE_MATH_DEFINES
 #include <cmath>
 
 #include "Lb302.h"
@@ -71,23 +70,28 @@
 namespace lmms
 {
 
-
 //#define engine::audioEngine()->outputSampleRate() 44100.0f
 const float sampleRateCutoff = 44100.0f;
 
 extern "C"
 {
 
+// necessary for getting instance out of shared lib
+PLUGIN_EXPORT Plugin *lmms_plugin_main(Model *m, void*)
+{
+	return new Lb302Synth(static_cast<InstrumentTrack*>(m));
+}
+
 Plugin::Descriptor PLUGIN_EXPORT lb302_plugin_descriptor =
 {
-	LMMS_STRINGIFY( PLUGIN_NAME ),
+	LMMS_STRINGIFY(PLUGIN_NAME),
 	"LB302",
-	QT_TRANSLATE_NOOP( "PluginBrowser",
-			"Incomplete monophonic imitation TB-303" ),
+	QT_TRANSLATE_NOOP("PluginBrowser",
+			"Incomplete monophonic imitation TB-303"),
 	"Paul Giblock <pgib/at/users.sf.net>",
 	0x0100,
 	Plugin::Type::Instrument,
-	new PluginPixmapLoader( "logo" ),
+	new PluginPixmapLoader("logo"),
 	nullptr,
 	nullptr,
 };
@@ -98,38 +102,29 @@ Plugin::Descriptor PLUGIN_EXPORT lb302_plugin_descriptor =
 // Lb302Filter
 //
 
-Lb302Filter::Lb302Filter(Lb302FilterKnobState* p_fs) :
-	fs(p_fs),
-	vcf_c0(0),
-	vcf_e0(0),
-	vcf_e1(0)
+Lb302Filter::Lb302Filter(Lb302FilterKnobState *p_fs) :
+	fs(p_fs)
 {
-};
+}
 
 
 void Lb302Filter::recalc()
 {
-	vcf_e1 = std::exp(6.109f + 1.5876f * fs->envmod + 2.1553f * fs->cutoff - 1.2f * (1.0f - fs->reso));
-	vcf_e0 = std::exp(5.613f - 0.8f * fs->envmod + 2.1553f * fs->cutoff - 0.7696f * (1.0f - fs->reso));
-	vcf_e0*=M_PI/Engine::audioEngine()->outputSampleRate();
-	vcf_e1*=M_PI/Engine::audioEngine()->outputSampleRate();
-	vcf_e1 -= vcf_e0;
-
+	const auto pi_sr = std::numbers::pi / Engine::audioEngine()->outputSampleRate();
+	vcf_e0 = std::exp(5.613f - 0.8f * fs->envmod + 2.1553f * fs->cutoff - 0.7696f * (1.0f - fs->reso)) * pi_sr;
+	vcf_e1 = std::exp(6.109f + 1.5876f * fs->envmod + 2.1553f * fs->cutoff - 1.2f * (1.0f - fs->reso)) * pi_sr - vcf_e0;
 	vcf_rescoeff = std::exp(-1.20f + 3.455f * fs->reso);
 };
 
 
 void Lb302Filter::envRecalc()
 {
-	vcf_c0 *= fs->envdecay;       // Filter Decay. vcf_decay is adjusted for Hz and ENVINC
+	vcf_c0 *= fs->envdecay; // Filter Decay. vcf_decay is adjusted for Hz and ENVINC
 	// vcf_rescoeff = std::exp(-1.20f + 3.455f * fs->reso); moved above
 };
 
 
-void Lb302Filter::playNote()
-{
-	vcf_c0 = vcf_e1;
-}
+void Lb302Filter::playNote() { vcf_c0 = vcf_e1; }
 
 
 //
@@ -137,30 +132,20 @@ void Lb302Filter::playNote()
 //
 
 Lb302FilterIIR2::Lb302FilterIIR2(Lb302FilterKnobState* p_fs) :
-	Lb302Filter(p_fs),
-	vcf_d1(0),
-	vcf_d2(0),
-	vcf_a(0),
-	vcf_b(0),
-	vcf_c(1)
+	Lb302Filter(p_fs)
 {
-
-	m_dist = new DspEffectLibrary::Distortion( 1.0, 1.0f);
-
+	m_dist = new DspEffectLibrary::Distortion(1.0, 1.0f);
 };
 
 
-Lb302FilterIIR2::~Lb302FilterIIR2()
-{
-	delete m_dist;
-}
+Lb302FilterIIR2::~Lb302FilterIIR2() { delete m_dist; }
 
 
 void Lb302FilterIIR2::recalc()
 {
 	Lb302Filter::recalc();
-	//m_dist->setThreshold(0.5+(fs->dist*2.0));
-	m_dist->setThreshold(fs->dist*75.0);
+	//m_dist->setThreshold(0.5 + (fs->dist * 2.0));
+	m_dist->setThreshold(fs->dist * 75.0);
 };
 
 
@@ -168,24 +153,23 @@ void Lb302FilterIIR2::envRecalc()
 {
 	Lb302Filter::envRecalc();
 
-	float w = vcf_e0 + vcf_c0;          // e0 is adjusted for Hz and doesn't need ENVINC
+	float w = vcf_e0 + vcf_c0; // e0 is adjusted for Hz and doesn't need ENVINC
 	float k = std::exp(-w / vcf_rescoeff); // Does this mean c0 is inheritantly?
 
 	vcf_a = 2.0 * std::cos(2.0 * w) * k;
-	vcf_b = -k*k;
+	vcf_b = -k * k;
 	vcf_c = 1.0 - vcf_a - vcf_b;
 }
 
 
-float Lb302FilterIIR2::process(const float& samp)
+float Lb302FilterIIR2::process(float samp)
 {
 	float ret = vcf_a*vcf_d1 + vcf_b*vcf_d2 + vcf_c*samp;
 	// Delayed samples for filter
 	vcf_d2 = vcf_d1;
 	vcf_d1 = ret;
 
-	if(fs->dist > 0)
-		ret=m_dist->nextSample(ret);
+	if (fs->dist > 0) { ret = m_dist->nextSample(ret); }
 
 	// output = IIR2 + dry
 	return ret;
@@ -250,17 +234,15 @@ void Lb302Filter3Pole::envRecalc()
 }
 
 
-float Lb302Filter3Pole::process(const float& samp)
+float Lb302Filter3Pole::process(float samp)
 {
-	float ax1  = lastin;
-	float ay11 = ay1;
-	float ay31 = ay2;
-	lastin  = (samp) - tanh(kres*aout);
-	ay1     = kp1h * (lastin+ax1) - kp*ay1;
-	ay2     = kp1h * (ay1 + ay11) - kp*ay2;
-	aout    = kp1h * (ay2 + ay31) - kp*aout;
+	float ax1 = lastin, ay11 = ay1, ay31 = ay2;
+	lastin  = samp - std::tanh(kres * aout);
+	ay1     = kp1h * (lastin + ax1) - kp * ay1;
+	ay2     = kp1h * (ay1 + ay11) - kp * ay2;
+	aout    = kp1h * (ay2 + ay31) - kp * aout;
 
-	return tanh(aout*value)*LB_24_VOL_ADJUST/(1.0+fs->dist);
+	return std::tanh(aout * value) * LB_24_VOL_ADJUST / (1.0 + fs->dist);
 }
 
 
@@ -268,18 +250,8 @@ float Lb302Filter3Pole::process(const float& samp)
 // LBSynth
 //
 
-static float computeDecayFactor(float decayTimeInSeconds, float targetedAttenuation)
-{
-	// This is the number of samples that correspond to the decay time in seconds
-	auto samplesNeededForDecay = decayTimeInSeconds * Engine::audioEngine()->outputSampleRate();
-
-	// This computes the factor that's needed to make a signal with a value of 1 decay to the
-	// targeted attenuation over the time in number of samples.
-	return std::pow(targetedAttenuation, 1. / samplesNeededForDecay);
-}
-
-Lb302Synth::Lb302Synth( InstrumentTrack * _instrumentTrack ) :
-	Instrument(_instrumentTrack, &lb302_plugin_descriptor, nullptr, Flag::IsSingleStreamed),
+Lb302Synth::Lb302Synth(InstrumentTrack *track) :
+	Instrument(track, &lb302_plugin_descriptor, nullptr, Flag::IsSingleStreamed),
 	vcf_cut_knob( 0.75f, 0.0f, 1.5f, 0.005f, this, tr( "VCF Cutoff Frequency" ) ),
 	vcf_res_knob( 0.75f, 0.0f, 1.25f, 0.005f, this, tr( "VCF Resonance" ) ),
 	vcf_mod_knob( 0.1f, 0.0f, 1.0f, 0.005f, this, tr( "VCF Envelope Mod" ) ),
@@ -291,115 +263,59 @@ Lb302Synth::Lb302Synth( InstrumentTrack * _instrumentTrack ) :
 	accentToggle( false, this, tr( "Accent" ) ),
 	deadToggle( false, this, tr( "Dead" ) ),
 	db24Toggle( false, this, tr( "24dB/oct Filter" ) ),
-	vca_attack(1.f - 0.96406088f),
-	vca_a0(0.5),
-	vca_a(0.),
-	vca_mode(VcaMode::NeverPlayed)
+	vcf_envpos(ENVINC)
 {
+	connect(Engine::audioEngine(), SIGNAL(sampleRateChanged()), this, SLOT(filterChanged()));
+	connect(&vcf_cut_knob, SIGNAL(dataChanged()), this, SLOT(filterChanged()));
+	connect(&vcf_res_knob, SIGNAL(dataChanged()), this, SLOT(filterChanged()));
+	connect(&vcf_mod_knob, SIGNAL(dataChanged()), this, SLOT(filterChanged()));
+	connect(&vcf_dec_knob, SIGNAL(dataChanged()), this, SLOT(filterChanged()));
+	connect(&db24Toggle, SIGNAL(dataChanged()), this, SLOT(db24Toggled()));
+	connect(&dist_knob, SIGNAL(dataChanged()), this, SLOT(filterChanged()));
 
-	connect( Engine::audioEngine(), SIGNAL( sampleRateChanged() ),
-	         this, SLOT ( filterChanged() ) );
-
-	connect( &vcf_cut_knob, SIGNAL( dataChanged() ),
-	         this, SLOT ( filterChanged() ) );
-
-	connect( &vcf_res_knob, SIGNAL( dataChanged() ),
-	         this, SLOT ( filterChanged() ) );
-
-	connect( &vcf_mod_knob, SIGNAL( dataChanged() ),
-	         this, SLOT ( filterChanged() ) );
-
-	connect( &vcf_dec_knob, SIGNAL( dataChanged() ),
-	         this, SLOT ( filterChanged() ) );
-
-	connect( &db24Toggle, SIGNAL( dataChanged() ),
-	         this, SLOT ( db24Toggled() ) );
-
-	connect( &dist_knob, SIGNAL( dataChanged() ),
-	         this, SLOT ( filterChanged()));
-
-
-	// SYNTH
-
-	vco_inc = 0.0;
-	vco_c = 0;
-	vco_k = 0;
-
-	vco_slide = 0; vco_slideinc = 0;
-	vco_slidebase = 0;
-
-	fs.cutoff = 0;
-	fs.envmod = 0;
-	fs.reso = 0;
-	fs.envdecay = 0;
-	fs.dist = 0;
-
-	vcf_envpos = ENVINC;
-
-	vco_shape = VcoShape::BLSawtooth;
-
-	vcfs[0] = new Lb302FilterIIR2(&fs);
-	vcfs[1] = new Lb302Filter3Pole(&fs);
+	vcfs = { new Lb302FilterIIR2(&fs), new Lb302Filter3Pole(&fs) };
 	db24Toggled();
-
-	sample_cnt = 0;
-	release_frame = 0;
-	catch_frame = 0;
-	catch_decay = 0;
-
-	last_offset = 0;
-
-	new_freq = false;
-
 	filterChanged();
 
-	auto iph = new InstrumentPlayHandle(this, _instrumentTrack);
-	Engine::audioEngine()->addPlayHandle( iph );
+	Engine::audioEngine()->addPlayHandle(new InstrumentPlayHandle(this, track));
 }
 
 
-Lb302Synth::~Lb302Synth()
+Lb302Synth::~Lb302Synth() { for (const auto& vcf : vcfs) { delete vcf; } }
+
+
+void Lb302Synth::saveSettings(QDomDocument& doc, QDomElement& thisElement)
 {
-	for (const auto& vcf : vcfs) 
-	{
-		delete vcf;
-	}
+	vcf_cut_knob.saveSettings(doc, thisElement, "vcf_cut");
+	vcf_res_knob.saveSettings(doc, thisElement, "vcf_res");
+	vcf_mod_knob.saveSettings(doc, thisElement, "vcf_mod");
+	vcf_dec_knob.saveSettings(doc, thisElement, "vcf_dec");
+
+	wave_shape.saveSettings(doc, thisElement, "shape");
+	dist_knob.saveSettings(doc, thisElement, "dist");
+	slide_dec_knob.saveSettings(doc, thisElement, "slide_dec");
+
+	slideToggle.saveSettings(doc, thisElement, "slide");
+	deadToggle.saveSettings(doc, thisElement, "dead");
+	db24Toggle.saveSettings(doc, thisElement, "db24");
 }
 
 
-void Lb302Synth::saveSettings( QDomDocument & _doc,
-	                             QDomElement & _this )
+void Lb302Synth::loadSettings(const QDomElement & thisElement)
 {
-	vcf_cut_knob.saveSettings( _doc, _this, "vcf_cut" );
-	vcf_res_knob.saveSettings( _doc, _this, "vcf_res" );
-	vcf_mod_knob.saveSettings( _doc, _this, "vcf_mod" );
-	vcf_dec_knob.saveSettings( _doc, _this, "vcf_dec" );
+	vcf_cut_knob.loadSettings(thisElement, "vcf_cut");
+	vcf_res_knob.loadSettings(thisElement, "vcf_res");
+	vcf_mod_knob.loadSettings(thisElement, "vcf_mod");
+	vcf_dec_knob.loadSettings(thisElement, "vcf_dec");
 
-	wave_shape.saveSettings( _doc, _this, "shape");
-	dist_knob.saveSettings( _doc, _this, "dist");
-	slide_dec_knob.saveSettings( _doc, _this, "slide_dec");
+	dist_knob.loadSettings(thisElement, "dist");
+	slide_dec_knob.loadSettings(thisElement, "slide_dec");
+	wave_shape.loadSettings(thisElement, "shape");
+	slideToggle.loadSettings(thisElement, "slide");
+	deadToggle.loadSettings(thisElement, "dead");
+	db24Toggle.loadSettings(thisElement, "db24");
 
-	slideToggle.saveSettings( _doc, _this, "slide");
-	deadToggle.saveSettings( _doc, _this, "dead");
-	db24Toggle.saveSettings( _doc, _this, "db24");
-}
-
-
-void Lb302Synth::loadSettings( const QDomElement & _this )
-{
-	vcf_cut_knob.loadSettings( _this, "vcf_cut" );
-	vcf_res_knob.loadSettings( _this, "vcf_res" );
-	vcf_mod_knob.loadSettings( _this, "vcf_mod" );
-	vcf_dec_knob.loadSettings( _this, "vcf_dec" );
-
-	dist_knob.loadSettings( _this, "dist");
-	slide_dec_knob.loadSettings( _this, "slide_dec");
-	wave_shape.loadSettings( _this, "shape");
-	slideToggle.loadSettings( _this, "slide");
-	deadToggle.loadSettings( _this, "dead");
-	db24Toggle.loadSettings( _this, "db24");
  	db24Toggled();
-
 	filterChanged();
 }
 
@@ -425,16 +341,11 @@ void Lb302Synth::filterChanged()
 void Lb302Synth::db24Toggled()
 {
 	vcf = vcfs[db24Toggle.value()];
-	// These recalcFilter calls might suck
-	recalcFilter();
+	recalcFilter(); // These recalcFilter calls might suck
 }
 
 
-
-QString Lb302Synth::nodeName() const
-{
-	return( lb302_plugin_descriptor.name );
-}
+QString Lb302Synth::nodeName() const { return lb302_plugin_descriptor.name; }
 
 
 // OBSOLETE. Break apart once we get Q_OBJECT to work. >:[
@@ -458,34 +369,35 @@ void Lb302Synth::recalcFilter()
 	vcf_envpos = ENVINC; // Trigger filter update in process()
 }
 
-inline float GET_INC(float freq) {
-	return freq/Engine::audioEngine()->outputSampleRate();  // TODO: Use actual sampling rate.
+// Should this be moved to lmms_math.h or another common location?
+// This is a fairly common opreration.
+/**!
+ * @brief Calculates the phase delta per sample that produces a wave with the given frequency.
+ *
+ * Given the current sample rate and a desired frequency, this function
+ * calculates the amount by which a waveform's phase should advance
+ * each sample in order to produce that frequency.
+ */
+inline float phaseIncPerSample(float freq)
+{
+	return freq / Engine::audioEngine()->outputSampleRate();
 }
 
-int Lb302Synth::process(SampleFrame* outbuf, const std::size_t size)
+void Lb302Synth::process(SampleFrame *outbuf, const std::size_t size)
 {
 	const float sampleRatio = 44100.f / Engine::audioEngine()->outputSampleRate();
 
 	// Hold on to the current VCF, and use it throughout this period
 	Lb302Filter *filter = vcf.loadAcquire();
 
-	if( release_frame == 0 || ! m_playingNote ) 
-	{
-		vca_mode = VcaMode::Decay;
-	}
+	if (!m_playingNote || release_frame == 0) { vca_mode = VcaMode::Decay; }
 
-	if( new_freq ) 
+	if (new_freq) 
 	{
 		//printf("  playing new note..\n");
-		Lb302Note note;
-		note.vco_inc = GET_INC( true_freq );
-		note.dead = deadToggle.value();
-		initNote(&note);
-
+		initNote(phaseIncPerSample(true_freq), deadToggle.value());
 		new_freq = false;
 	}
-
-
 
 	// TODO: NORMAL RELEASE
 	// vca_mode = 1;
@@ -496,55 +408,45 @@ int Lb302Synth::process(SampleFrame* outbuf, const std::size_t size)
 	//
 	// At 44.1 kHz this will compute something very close to the previously
 	// hard coded value of 0.99897516.
-	auto decay = computeDecayFactor(0.245260770975f, 1.f / 65536.f);
+	const auto computeDecayFactor = [](float decayTimeSeconds, float targetAttenuation)
+	{
+		// This is the number of samples that correspond to the decay time in seconds
+		const auto samplesNeededForDecay = decayTimeSeconds * Engine::audioEngine()->outputSampleRate();
+		// This computes the factor that's needed to make a signal with a value of 1 decay to the
+		// targeted attenuation over the time in number of samples.
+		return std::pow(targetAttenuation, 1. / samplesNeededForDecay);
+	};
+	const auto decay = computeDecayFactor(0.245260770975, 1.f / 65536.f);
 
-	for (auto i = std::size_t{0}; i < size; i++)
+	for (std::size_t i = 0; i < size; i++)
 	{
 		// start decay if we're past release
 		if (i >= release_frame) { vca_mode = VcaMode::Decay; }
 
 		// update vcf
-		if(vcf_envpos >= ENVINC) {
+		if (vcf_envpos >= ENVINC)
+		{
 			filter->envRecalc();
 
 			vcf_envpos = 0;
 
-			if (vco_slide) {
-					vco_inc = vco_slidebase - vco_slide;
-					// Calculate coeff from dec_knob on knob change.
-					vco_slide -= vco_slide * ( 0.1f - slide_dec_knob.value() * 0.0999f ) * sampleRatio; // TODO: Adjust for ENVINC
-
+			if (vco_slide)
+			{
+				vco_inc = vco_slidebase - vco_slide;
+				// Calculate coeff from dec_knob on knob change.
+				vco_slide -= vco_slide * (0.1f - slide_dec_knob.value() * 0.0999f) * sampleRatio; // TODO: Adjust for ENVINC
 			}
 		}
-
 
 		sample_cnt++;
 		vcf_envpos++;
 
-		//int  decay_frames = 128;
+		// int decay_frames = 128;
 
 		// update vco
 		vco_c += vco_inc;
-		
-		if(vco_c > 0.5)
-			vco_c -= 1.0;
-
-		switch(int(rint(wave_shape.value()))) {
-			case 0: vco_shape = VcoShape::Sawtooth; break;
-			case 1: vco_shape = VcoShape::Triangle; break;
-			case 2: vco_shape = VcoShape::Square; break;
-			case 3: vco_shape = VcoShape::RoundSquare; break;
-			case 4: vco_shape = VcoShape::Moog; break;
-			case 5: vco_shape = VcoShape::Sine; break;
-			case 6: vco_shape = VcoShape::Exponential; break;
-			case 7: vco_shape = VcoShape::WhiteNoise; break;
-			case 8: vco_shape = VcoShape::BLSawtooth; break;
-			case 9: vco_shape = VcoShape::BLSquare; break;
-			case 10: vco_shape = VcoShape::BLTriangle; break;
-			case 11: vco_shape = VcoShape::BLMoog; break;
-			default:  vco_shape = VcoShape::Sawtooth; break;
-		}
-
+		if (vco_c > 0.5) { vco_c -= 1.0; }
+		vco_shape = static_cast<VcoShape>(wave_shape.value());
 		// add vco_shape_param the changes the shape of each curve.
 		// merge sawtooths with triangle and square with round square?
 		switch (vco_shape) {
@@ -553,9 +455,8 @@ int Lb302Synth::process(SampleFrame* outbuf, const std::size_t size)
 				break;
 
 			case VcoShape::Triangle:  // p0: duty rev.saw<->triangle<->saw p1: curviness
-				vco_k = (vco_c*2.0)+0.5;
-				if (vco_k>0.5)
-					vco_k = 1.0- vco_k;
+				vco_k = vco_c * 2.0 + 0.5;
+				if (vco_k > 0.5) { vco_k = 1.0 - vco_k; }
 				break;
 
 			case VcoShape::Square: // p0: slope of top
@@ -621,12 +522,8 @@ int Lb302Synth::process(SampleFrame* outbuf, const std::size_t size)
 		//printf("%f %d\n", vco_c, sample_cnt);
 
 
-		//samp = vco_k * vca_a;
-
-		if( sample_cnt <= 4 )
-		{
-	//			vca_a = 0;
-		}
+		// samp = vco_k * vca_a;
+		// if (sample_cnt <= 4) { vca_a = 0; }
 
 #else
 		//samp = vco_k*vca_a;
@@ -637,73 +534,69 @@ int Lb302Synth::process(SampleFrame* outbuf, const std::size_t size)
 		*/
 		//LB302 samp *= (float)(decay_frames - catch_decay)/(float)decay_frames;
 
-		for( int c = 0; c < DEFAULT_CHANNELS; c++ ) 
-		{
-			outbuf[i][c] = samp;
-		}
+		for (auto c = 0; c < DEFAULT_CHANNELS; c++) { outbuf[i][c] = samp; }
 
 		// Handle Envelope
-		if(vca_mode==VcaMode::Attack) {
+		if (vca_mode == VcaMode::Attack)
+		{
 			vca_a+=(vca_a0-vca_a)*vca_attack;
-			if(sample_cnt>=0.5*Engine::audioEngine()->outputSampleRate())
-				vca_mode = VcaMode::Idle;
+			if (sample_cnt >= 0.5 * Engine::audioEngine()->outputSampleRate()) { vca_mode = VcaMode::Idle; }
 		}
-		else if(vca_mode == VcaMode::Decay) {
+		else if (vca_mode == VcaMode::Decay)
+		{
 			vca_a *= decay;
 
 			// the following line actually speeds up processing
-			if(vca_a < (1/65536.0)) {
+			if (vca_a < (1 / 65536.0))
+			{
 				vca_a = 0;
 				vca_mode = VcaMode::NeverPlayed;
 			}
 		}
-
 	}
-	return 1;
 }
 
 
-/*  Prepares the active LB302 note.  I separated this into a function because it
- *  needs to be called onplayNote() when a new note is started.  It also needs
- *  to be called from process() when a prior edge-to-edge note is done releasing.
+/*!
+ * @brief Prepares the active LB302 note.
+ *
+ * I separated this into a function because it needs to be called
+ * onplayNote() when a new note is started. It also needs to be called
+ * from process() when a prior edge-to-edge note is done releasing.
  */
-
-void Lb302Synth::initNote( Lb302Note *n)
+void Lb302Synth::initNote(float p_vco_inc, bool dead)
 {
 	catch_decay = 0;
-
-	vco_inc = n->vco_inc;
+	vco_inc = p_vco_inc;
 
 	// Always reset vca on non-dead notes, and
 	// Only reset vca on decaying(decayed) and never-played
-	if(n->dead == 0 || (vca_mode == VcaMode::Decay || vca_mode == VcaMode::NeverPlayed)) {
-		//printf("    good\n");
+	if (!dead || vca_mode == VcaMode::Decay || vca_mode == VcaMode::NeverPlayed)
+	{
 		sample_cnt = 0;
 		vca_mode = VcaMode::Attack;
-		// LB303:
-		//vca_a = 0;
+		// vca_a = 0; // LB303
 	}
-	else {
-		vca_mode = VcaMode::Idle;
-	}
+	else { vca_mode = VcaMode::Idle; }
 
 	initSlide();
 
 	// Slide-from note, save inc for next note
-	if (slideToggle.value()) {
+	if (slideToggle.value())
+	{
 		vco_slideinc = vco_inc; // May need to equal vco_slidebase+vco_slide if last note slid
 	}
 
-
 	recalcFilter();
 
-	if(n->dead ==0){
+	if (!dead)
+	{
 		// Swap next two blocks??
-#if (QT_VERSION >= QT_VERSION_CHECK(5,14,0))
+		#if (QT_VERSION >= QT_VERSION_CHECK(5,14,0))
 		vcf.loadRelaxed()->playNote();
-#else
+		#else
 		vcf.load()->playNote();
-#endif
+		#endif
 		// Ensure envelope is recalculated
 		vcf_envpos = ENVINC;
 
@@ -717,115 +610,84 @@ void Lb302Synth::initNote( Lb302Note *n)
 void Lb302Synth::initSlide()
 {
 	// Initiate Slide
-	if (vco_slideinc) {
-		//printf("    sliding\n");
-		vco_slide = vco_inc-vco_slideinc;	// Slide amount
-		vco_slidebase = vco_inc;			// The REAL frequency
-		vco_slideinc = 0;					// reset from-note
-	}
-	else {
-		vco_slide = 0;
+	vco_slide = 0;
+	if (vco_slideinc)
+	{
+		vco_slide = vco_inc - vco_slideinc;	// Slide amount
+		vco_slidebase = vco_inc; // The REAL frequency
+		vco_slideinc = 0; // reset from-note
 	}
 }
 
 
-void Lb302Synth::playNote( NotePlayHandle * _n, SampleFrame* _working_buffer )
+void Lb302Synth::playNote(NotePlayHandle *nph, SampleFrame*)
 {
-	if( _n->isMasterNote() || ( _n->hasParent() && _n->isReleased() ) )
-	{
-		return;
-	}
+	if (nph->isMasterNote() || (nph->hasParent() && nph->isReleased())) { return; }
 
 	// sort notes: new notes to the end
 	m_notesMutex.lock();
-	if( _n->totalFramesPlayed() == 0 )
-	{
-		m_notes.append( _n );
-	}
-	else
-	{
-		m_notes.prepend( _n );
-	}
+	if (nph->totalFramesPlayed() == 0) { m_notes.append(nph); }
+	else { m_notes.prepend(nph); }
 	m_notesMutex.unlock();
 
-	release_frame = std::max(release_frame, _n->framesLeft() + _n->offset());
+	release_frame = std::max(release_frame, nph->framesLeft() + nph->offset());
 }
 
 
-
-void Lb302Synth::processNote( NotePlayHandle * _n )
+void Lb302Synth::processNote(NotePlayHandle *nph)
 {
-		/// Start a new note.
-		if (_n->m_pluginData != this)
-		{
-			m_playingNote = _n;
-			new_freq = true;
-			_n->m_pluginData = this;
-		}
-		
-		if( ! m_playingNote && ! _n->isReleased() && release_frame > 0 )
-		{
-			m_playingNote = _n;
-			if ( slideToggle.value() ) 
-			{
-				vco_slideinc = GET_INC( _n->frequency() );
-			}
-		}
+	/// Start a new note.
+	if (nph->m_pluginData != this)
+	{
+		m_playingNote = nph;
+		new_freq = true;
+		nph->m_pluginData = this;
+	}
+	
+	if (!m_playingNote && !nph->isReleased() && release_frame > 0)
+	{
+		m_playingNote = nph;
+		if (slideToggle.value()) { vco_slideinc = phaseIncPerSample(nph->frequency()); }
+	}
 
-		// Check for slide
-		if( m_playingNote == _n ) 
-		{
-			true_freq = _n->frequency();
-
-			if( slideToggle.value() ) {
-				vco_slidebase = GET_INC( true_freq );			// The REAL frequency
-			}
-			else {
-				vco_inc = GET_INC( true_freq );
-			}
-		}
+	// Check for slide
+	if (m_playingNote == nph)
+	{
+		true_freq = nph->frequency();
+		const auto true_inc = phaseIncPerSample(true_freq);
+		if (slideToggle.value()) { vco_slidebase = true_inc; } else { vco_inc = true_inc; }
+	}
 }
 
 
-
-void Lb302Synth::play( SampleFrame* _working_buffer )
+void Lb302Synth::play(SampleFrame *outbuf)
 {
 	m_notesMutex.lock();
-	while( ! m_notes.isEmpty() )
-	{
-		processNote( m_notes.takeFirst() );
-	};
+	while (!m_notes.isEmpty())	{ processNote(m_notes.takeFirst()); };
 	m_notesMutex.unlock();
-	
-	const fpp_t frames = Engine::audioEngine()->framesPerPeriod();
 
-	process( _working_buffer, frames );
-//	release_frame = 0; //removed for issue # 1432
+	process(outbuf, Engine::audioEngine()->framesPerPeriod());
+	// release_frame = 0; //removed for issue # 1432
 }
 
 
-
-void Lb302Synth::deleteNotePluginData( NotePlayHandle * _n )
+void Lb302Synth::deleteNotePluginData(NotePlayHandle *nph)
 {
-	//printf("GONE\n");
-	if( m_playingNote == _n )
-	{
-		m_playingNote = nullptr;
-	}
+	if (m_playingNote == nph) { m_playingNote = nullptr; }
 }
 
 
-gui::PluginView * Lb302Synth::instantiateView( QWidget * _parent )
+gui::PluginView * Lb302Synth::instantiateView(QWidget *parent)
 {
-	return( new gui::Lb302SynthView( this, _parent ) );
+	return new gui::Lb302SynthView(this, parent);
 }
 
 namespace gui
 {
 
 
-Lb302SynthView::Lb302SynthView( Instrument * _instrument, QWidget * _parent ) :
-	InstrumentViewFixedSize( _instrument, _parent )
+Lb302SynthView::Lb302SynthView(Instrument *instrument, QWidget *parent) :
+	InstrumentViewFixedSize(instrument, parent)
 {
 	// GUI
 	m_vcfCutKnob = new Knob( KnobType::Bright26, this );
@@ -1031,21 +893,6 @@ void Lb302SynthView::modelChanged()
 
 
 } // namespace gui
-
-
-extern "C"
-{
-
-// necessary for getting instance out of shared lib
-PLUGIN_EXPORT Plugin * lmms_plugin_main( Model * m, void * )
-{
-
-	return( new Lb302Synth(
-		static_cast<InstrumentTrack *>( m ) ) );
-}
-
-
-}
 
 
 } // namespace lmms
