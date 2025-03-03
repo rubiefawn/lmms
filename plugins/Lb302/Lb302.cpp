@@ -417,7 +417,7 @@ void Lb302Synth::process(SampleFrame *outbuf, const std::size_t size)
 		// targeted attenuation over the time in number of samples.
 		return std::pow(targetAttenuation, 1. / samplesNeededForDecay);
 	};
-	const auto decay = computeDecayFactor(0.245260770975, 1.f / 65536.f);
+	const auto decay = computeDecayFactor(0.245260770975f, 1.f / 65536.f);
 
 	for (std::size_t i = 0; i < size; i++)
 	{
