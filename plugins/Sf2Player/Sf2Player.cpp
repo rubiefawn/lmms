@@ -938,18 +938,6 @@ namespace gui
 {
 
 
-class Sf2Knob : public Knob
-{
-public:
-	Sf2Knob( QWidget * _parent ) :
-			Knob( KnobType::Styled, _parent )
-	{
-		setFixedSize( 31, 38 );
-	}
-};
-
-
-
 Sf2InstrumentView::Sf2InstrumentView( Instrument * _instrument, QWidget * _parent ) :
 	InstrumentViewFixedSize( _instrument, _parent )
 {
@@ -1014,10 +1002,16 @@ Sf2InstrumentView::Sf2InstrumentView( Instrument * _instrument, QWidget * _paren
 	//hl->addWidget( m_filenameLabel );
 //	vl->addLayout( hl );
 
+	const auto makeKnob = [this](int x, int y, const QString& hintText, const QString& unit)
+	{
+		auto* newKnob = new Knob(KnobType::Styled, this);
+		newKnob->move(x, y);
+		newKnob->setHintText(hintText, unit);
+		return newKnob;
+	};
+
 	// Gain
-	m_gainKnob = new Sf2Knob( this );
-	m_gainKnob->setHintText( tr("Gain:"), "" );
-	m_gainKnob->move( 86, 55 );
+	m_gainKnob = makeKnob(86, 55, tr("Gain:"), "");
 //	vl->addWidget( m_gainKnob );
 
 	// Reverb
@@ -1032,21 +1026,10 @@ Sf2InstrumentView::Sf2InstrumentView( Instrument * _instrument, QWidget * _paren
 	m_reverbButton->setToolTip(tr("Apply reverb (if supported)"));
 
 
-	m_reverbRoomSizeKnob = new Sf2Knob( this );
-	m_reverbRoomSizeKnob->setHintText( tr("Room size:"), "" );
-	m_reverbRoomSizeKnob->move( 93, 160 );
-
-	m_reverbDampingKnob = new Sf2Knob( this );
-	m_reverbDampingKnob->setHintText( tr("Damping:"), "" );
-	m_reverbDampingKnob->move( 130, 160 );
-
-	m_reverbWidthKnob = new Sf2Knob( this );
-	m_reverbWidthKnob->setHintText( tr("Width:"), "" );
-	m_reverbWidthKnob->move( 167, 160 );
-
-	m_reverbLevelKnob = new Sf2Knob( this );
-	m_reverbLevelKnob->setHintText( tr("Level:"), "" );
-	m_reverbLevelKnob->move( 204, 160 );
+	m_reverbRoomSizeKnob = makeKnob( 93, 160, tr("Room size:"), "");
+	m_reverbDampingKnob  = makeKnob(130, 160, tr("Damping:"), "");
+	m_reverbWidthKnob    = makeKnob(167, 160, tr("Width:"), "");
+	m_reverbLevelKnob    = makeKnob(204, 160, tr("Level:"), "");
 
 /*	hl->addWidget( m_reverbOnLed );
 	hl->addWidget( m_reverbRoomSizeKnob );
@@ -1067,21 +1050,10 @@ Sf2InstrumentView::Sf2InstrumentView( Instrument * _instrument, QWidget * _paren
 	m_chorusButton->setInactiveGraphic( PLUGIN_NAME::getIconPixmap( "chorus_off" ) );
 	m_chorusButton->setToolTip(tr("Apply chorus (if supported)"));
 
-	m_chorusNumKnob = new Sf2Knob( this );
-	m_chorusNumKnob->setHintText( tr("Voices:"), "" );
-	m_chorusNumKnob->move( 93, 206 );
-
-	m_chorusLevelKnob = new Sf2Knob( this );
-	m_chorusLevelKnob->setHintText( tr("Level:"), "" );
-	m_chorusLevelKnob->move( 130 , 206 );
-
-	m_chorusSpeedKnob = new Sf2Knob( this );
-	m_chorusSpeedKnob->setHintText( tr("Speed:"), "" );
-	m_chorusSpeedKnob->move( 167 , 206 );
-
-	m_chorusDepthKnob = new Sf2Knob( this );
-	m_chorusDepthKnob->setHintText( tr("Depth:"), "" );
-	m_chorusDepthKnob->move( 204 , 206 );
+	m_chorusNumKnob   = makeKnob( 93, 206, tr("Voices:"), "");
+	m_chorusLevelKnob = makeKnob(130, 206, tr("Level:"), "");
+	m_chorusSpeedKnob = makeKnob(167, 206, tr("Speed:"), "");
+	m_chorusDepthKnob = makeKnob(204, 206, tr("Depth:"), "");
 /*
 	hl->addWidget( m_chorusOnLed );
 	hl->addWidget( m_chorusNumKnob);
