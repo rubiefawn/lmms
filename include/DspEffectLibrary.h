@@ -329,10 +329,10 @@ namespace lmms::DspEffectLibrary
 
 		void nextSample( sample_t& inLeft, sample_t& inRight )
 		{
-			constexpr float toRad = std::numbers::pi_v<float> / 180.f;
+			const auto coeff = std::sin(degToRad(m_wideCoeff * .5f));
 			const sample_t tmp = inLeft;
-			inLeft += inRight * std::sin(m_wideCoeff * toRad * .5f);
-			inRight -= tmp * std::sin(m_wideCoeff * toRad * .5f);
+			inLeft  += coeff * inRight;
+			inRight -= coeff * tmp;
 		}
 
 	private:

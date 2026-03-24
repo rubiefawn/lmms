@@ -83,6 +83,24 @@ inline auto absFraction(std::floating_point auto x) noexcept
 }
 
 
+//! @brief Converts degrees to radians.
+template<std::floating_point T>
+constexpr T degToRad(T deg)
+{
+	constexpr auto ratio = std::numbers::pi_v<T> / 180;
+	return deg * ratio;
+}
+
+
+//! @brief Converts radians to degrees.
+template<std::floating_point T>
+constexpr T radToDeg(T rad)
+{
+	constexpr auto ratio = 180 / std::numbers::pi_v<T>;
+	return rad * ratio;
+}
+
+
 //! @brief Returns a pseudorandom integer within [0, 32768).
 //! @returns A pseudorandom integer greater than or equal to 0 and less than 32767.
 inline int fastRand() noexcept
