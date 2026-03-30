@@ -26,20 +26,17 @@
 #ifndef LMMS_VOLUME_H
 #define LMMS_VOLUME_H
 
+#include <array>
 #include "LmmsTypes.h"
 
 namespace lmms
 {
 
+inline constexpr volume_t MinVolume     = 0;
+inline constexpr volume_t MaxVolume     = 200;
+inline constexpr volume_t DefaultVolume = 100;
 
-constexpr volume_t MinVolume = 0;
-constexpr volume_t MaxVolume = 200;
-constexpr volume_t DefaultVolume = 100;
-
-struct StereoVolumeVector
-{
-	float vol[2];
-};
+using StereoVolumeVector = std::array<float, 2>;
 
 } // namespace lmms
 

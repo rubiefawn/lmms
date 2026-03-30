@@ -35,29 +35,28 @@
 namespace lmms
 {
 
-inline constexpr panning_t PanningRight = 100;
-inline constexpr panning_t PanningLeft = -PanningRight;
-inline constexpr panning_t PanningCenter = 0;
+inline constexpr panning_t PanningRight   = 100;
+inline constexpr panning_t PanningLeft    = -PanningRight;
+inline constexpr panning_t PanningCenter  = 0;
 inline constexpr panning_t DefaultPanning = PanningCenter;
 
-inline StereoVolumeVector panningToVolumeVector( panning_t _p,
-							float _scale = 1.0f )
+
+// TODO C++23: constexpr since std::abs() will be constexpr
+inline StereoVolumeVector panningToVolumeVector(panning_t pan, float amplitude = 1.0f) noexcept
 {
-	StereoVolumeVector v = { { _scale, _scale } };
-	const float pf = _p / 100.0f;
-	v.vol[_p >= PanningCenter ? 0 : 1] *= 1.0f - std::abs(pf);
+	StereoVolumeVector v = { amplitude, amplitude };
+	v[pan >= PanningCenter ? 0 : 1] *= 1.0f - std::abs(pan * 0.01f);
 	return v;
 }
 
 
-inline int panningToMidi( panning_t _p )
+constexpr int panningToMidi(panning_t pan) noexcept
 {
-	return MidiMinPanning + (int) (
-			  ( (float)( _p - PanningLeft ) ) /
-			  ( (float)( PanningRight - PanningLeft ) ) *
-			  ( (float)( MidiMaxPanning - MidiMinPanning ) ) );
+	constexpr auto PanningDiff = static_cast<float>(PanningRight - PanningLeft);
+	constexpr auto MidiPanningDiff = static_cast<float>(MidiMaxPanning - MidiMinPanning);
+	constexpr auto PanningDiffRatio = MidiPanningDiff / PanningDiff;
+	return MidiMinPanning + static_cast<int>((pan - PanningLeft) * PanningDiffRatio);
 }
-
 
 } // namespace lmms
 

@@ -124,19 +124,19 @@ enum MidiControllerRegisteredParameterNumbers
 	MidiNullFunctionNumberRPN = 0x7F7F
 };
 
-const int MidiChannelCount = 16;
-const int MidiControllerCount = 128;
-const int MidiProgramCount = 128;
-const int MidiMaxVelocity = 127;
-const int MidiDefaultVelocity = MidiMaxVelocity / 2;
-const int MidiMaxControllerValue = 127;
-const int MidiMaxKey = 127;
+inline constexpr int MidiChannelCount = 16;
+inline constexpr int MidiControllerCount = 128;
+inline constexpr int MidiProgramCount = 128;
+inline constexpr int MidiMaxVelocity = 127;
+inline constexpr int MidiDefaultVelocity = MidiMaxVelocity / 2;
+inline constexpr int MidiMaxControllerValue = 127;
+inline constexpr int MidiMaxKey = 127;
 
-const int MidiMaxPanning = 127;
-const int MidiMinPanning = -128;
+inline constexpr int MidiMaxPanning = 127;
+inline constexpr int MidiMinPanning = -128;
 
-const int MidiMinPitchBend = 0;
-const int MidiMaxPitchBend = 16383;
+inline constexpr int MidiMinPitchBend = 0;
+inline constexpr int MidiMaxPitchBend = 16383;
 
 
 } // namespace lmms
