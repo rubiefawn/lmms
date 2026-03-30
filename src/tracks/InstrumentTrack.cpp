@@ -250,7 +250,7 @@ void InstrumentTrack::processAudioBuffer( SampleFrame* buf, const f_cnt_t frames
 	}
 
 	// get volume knob data
-	static const float DefaultVolumeRatio = 1.0f / DefaultVolume;
+	constexpr float DefaultVolumeRatio = 1.f / DefaultVolume;
 	/*ValueBuffer * volBuf = m_volumeModel.valueBuffer();
 	float v_scale = volBuf
 		? 1.0f
@@ -263,15 +263,13 @@ void InstrumentTrack::processAudioBuffer( SampleFrame* buf, const f_cnt_t frames
 	{
 		const f_cnt_t offset = n->noteOffset();
 		m_soundShaping.processAudioBuffer( buf + offset, frames - offset, n );
-		const float vol = ( (float) n->getVolume() * DefaultVolumeRatio );
-		const panning_t pan = std::clamp(n->getPanning(), PanningLeft, PanningRight);
-		StereoVolumeVector vv = panningToVolumeVector( pan, vol );
+		StereoVolumeVector vv = panningToVolumeVector(
+			std::clamp(n->getPanning(), PanningLeft, PanningRight),
+			n->getVolume() * DefaultVolumeRatio
+		);
 		for( f_cnt_t f = offset; f < frames; ++f )
 		{
-			for( int c = 0; c < 2; ++c )
-			{
-				buf[f][c] *= vv.vol[c];
-			}
+			for (ch_cnt_t c = 0; c < DEFAULT_CHANNELS; ++c) { buf[f][c] *= vv[c]; }
 		}
 	}
 }
