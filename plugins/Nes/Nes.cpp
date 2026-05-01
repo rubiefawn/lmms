@@ -388,7 +388,7 @@ void NesObject::renderOutput( SampleFrame* buf, f_cnt_t frames )
 
 		auto pin1 = static_cast<float>(ch1 + ch2);
 		// add dithering noise
-		pin1 *= 1.0 + ( Oscillator::noiseSample( 0.0f ) * DITHER_AMP );		
+		pin1 *= 1.f + Oscillator::noiseSample() * DITHER_AMP;
 		pin1 = pin1 / 30.0f;
 		
 		pin1 = signedPowf(pin1, NES_DIST);
@@ -406,7 +406,7 @@ void NesObject::renderOutput( SampleFrame* buf, f_cnt_t frames )
 
 		auto pin2 = static_cast<float>(ch3 + ch4);
 		// add dithering noise
-		pin2 *= 1.0 + ( Oscillator::noiseSample( 0.0f ) * DITHER_AMP );		
+		pin2 *= 1.f + Oscillator::noiseSample() * DITHER_AMP;
 		pin2 = pin2 / 30.0f;
 		
 		pin2 = signedPowf(pin2, NES_DIST);

@@ -123,7 +123,7 @@ void LfoGraph::paintEvent(QPaintEvent*)
 				case EnvelopeAndLfoParameters::LfoShape::RandomWave:
 					if (x % (int)(900 * lfoSpeed + 1) == 0)
 					{
-						m_randomGraph = Oscillator::noiseSample(0.0);
+						m_randomGraph = Oscillator::noiseSample();
 					}
 					value = m_randomGraph;
 					break;

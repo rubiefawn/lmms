@@ -229,7 +229,7 @@ inline sample_t EnvelopeAndLfoParameters::lfoShapeSample( f_cnt_t _frame_offset 
 		case LfoShape::RandomWave:
 			if( frame == 0 )
 			{
-				m_random = Oscillator::noiseSample( 0.0f );
+				m_random = Oscillator::noiseSample();
 			}
 			shape_sample = m_random;
 			break;

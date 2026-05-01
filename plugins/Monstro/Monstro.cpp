@@ -81,8 +81,8 @@ MonstroSynth::MonstroSynth( MonstroInstrument * _i, NotePlayHandle * _nph ) :
 	m_lfo_phase[0] = 0.0f;
 	m_lfo_phase[1] = 0.0f;
 
-	m_lfo_next[0] = Oscillator::noiseSample( 0.0f );
-	m_lfo_next[1] = Oscillator::noiseSample( 0.0f );
+	m_lfo_next[0] = Oscillator::noiseSample();
+	m_lfo_next[1] = Oscillator::noiseSample();
 
 	m_osc1l_last = 0.0f;
 	m_osc1r_last = 0.0f;
@@ -764,7 +764,8 @@ inline void MonstroSynth::updateModulators(float * env1, float * env2, float * l
 			case WAVE_RANDOM:
 				for( f_cnt_t f = 0; f < frames; ++f )
 				{
-					if( ( tfp + f ) % static_cast<int>( m_lfo_rate[i] ) == 0 ) m_lfo_last[i] = Oscillator::noiseSample( 0.0f );
+					if ((tfp + f) % static_cast<int>(m_lfo_rate[i]) == 0)
+						{ m_lfo_last[i] = Oscillator::noiseSample(); }
 					lfo[i][f] = m_lfo_last[i];
 					m_lfo_phase[i] += m_lfo_inc[i];
 				}
@@ -776,7 +777,7 @@ inline void MonstroSynth::updateModulators(float * env1, float * env2, float * l
 					if( tm == 0 )
 					{
 						m_lfo_last[i] = m_lfo_next[i];
-						m_lfo_next[i] = Oscillator::noiseSample( 0.0f );
+						m_lfo_next[i] = Oscillator::noiseSample();
 					}
 					lfo[i][f] = cosinusInterpolate( m_lfo_last[i], m_lfo_next[i], static_cast<float>( tm ) / m_lfo_rate[i] );
 					m_lfo_phase[i] += m_lfo_inc[i];

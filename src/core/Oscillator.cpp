@@ -807,7 +807,7 @@ template<>
 inline sample_t Oscillator::getSample<Oscillator::WaveShape::WhiteNoise>(
 							const float _sample )
 {
-	return( noiseSample( _sample ) );
+	return noiseSample();
 }
 
 

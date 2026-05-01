@@ -218,7 +218,7 @@ private:
 				return Oscillator::expSample( _ph );
 				break;
 			case WAVE_NOISE:
-				return Oscillator::noiseSample( _ph );
+				return Oscillator::noiseSample();
 				break;
 
 			case WAVE_TRI_D:

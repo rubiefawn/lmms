@@ -110,57 +110,68 @@ public:
 
 	void update(SampleFrame* ab, const f_cnt_t frames, const ch_cnt_t chnl, bool modulator = false);
 
-	// now follow the wave-shape-routines...
-	static inline sample_t sinSample( const float _sample )
+	//! @brief Generate a sample of a sine waveform
+	//! @param phase The input phase of the waveform, in domain [0, 1)
+	template<std::floating_point T>
+	[[nodiscard, gnu::const]]
+	static inline sample_t sinSample(T phase)
 	{
-		return std::sin(_sample * 2 * std::numbers::pi_v<float>);
+		constexpr auto tau = T{2} * std::numbers::pi_v<T>;
+		return std::sin(tau * phase);
 	}
 
-	static inline sample_t triangleSample( const float _sample )
+	//! @brief Generate a sample of a triangle waveform
+	//! @param phase The input phase of the waveform, in domain [0, 1)
+	template<std::floating_point T>
+	[[nodiscard, gnu::const]]
+	static inline sample_t triangleSample(T phase)
 	{
-		const float ph = normalizePhase<1>(_sample);
-		if( ph <= 0.25f )
-		{
-			return ph * 4.0f;
-		}
-		else if( ph <= 0.75f )
-		{
-			return 2.0f - ph * 4.0f;
-		}
-		return ph * 4.0f - 4.0f;
+		const auto x = normalizePhase<1, T>(phase - T{0.5});
+		return T{2} * std::fabs(T{2} * x - T{1}) - T{1};
 	}
 
-	static inline sample_t sawSample( const float _sample )
+	//! @brief Generate a sample of a sawtooth waveform
+	//! @param phase The input phase of the waveform, in domain [0, 1)
+	template<std::floating_point T>
+	[[nodiscard, gnu::const]]
+	static inline sample_t sawSample(T phase)
 	{
-		return -1.0f + normalizePhase<1>(_sample) * 2.0f;
+		return T{2} * normalizePhase<1, T>(phase) - T{1};
 	}
 
-	static inline sample_t squareSample( const float _sample )
+	//! @brief Generate a sample of a square waveform
+	//! @param phase The input phase of the waveform, in domain [0, 1)
+	template<std::floating_point T>
+	[[nodiscard, gnu::const]]
+	static inline sample_t squareSample(T phase)
 	{
-		return normalizePhase<1>(_sample) > 0.5f ? -1.0f : 1.0f;
+		return std::copysign(T{1}, T{0.5} - normalizePhase<1, T>(phase));
 	}
 
-	static inline sample_t moogSawSample( const float _sample )
+	//! @brief Generate a sample of a moog-like sawtooth waveform
+	//! @param phase The input phase of the waveform, in domain [0, 1)
+	template<std::floating_point T>
+	[[nodiscard, gnu::const]]
+	static inline sample_t moogSawSample(T phase)
 	{
-		const float ph = normalizePhase<1>(_sample);
-		if( ph < 0.5f )
-		{
-			return -1.0f + ph * 4.0f;
-		}
-		return 1.0f - 2.0f * ph;
+		const auto x = normalizePhase<1, T>(phase);
+		return x < T{0.5} ? T{4} * x - T{1} : T{-2} * x + T{1};
 	}
 
-	static inline sample_t expSample( const float _sample )
+	//! @brief Generate a sample of an "exponential" waveform
+	//! @details "Exponential" is a misnomer; this waveform is a parabola. The "exponent" is 2.
+	//! @param phase The input phase of the waveform, in domain [0, 1)
+	template<std::floating_point T>
+	[[nodiscard, gnu::const]]
+	static inline sample_t expSample(T phase)
 	{
-		float ph = normalizePhase<1>(_sample);
-		if( ph > 0.5f )
-		{
-			ph = 1.0f - ph;
-		}
-		return -1.0f + 8.0f * ph * ph;
+		const auto x = normalizePhase<1, T>(phase - T{0.5});
+		return (T{8} * x) * (x - T{1}) + T{1};
 	}
 
-	static inline sample_t noiseSample( const float )
+	//! @brief Generate a sample of white noise
+	[[nodiscard]]
+	static inline sample_t noiseSample([[maybe_unused]] float = 0.f)
 	{
 		return fastRandInc(-1.f, 1.f);
 	}

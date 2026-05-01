@@ -576,8 +576,7 @@ void graphModel::setWaveToNoise()
 {
 	for( int i = 0; i < length(); i++ )
 	{
-		m_samples[i] = Oscillator::noiseSample(
-				i / static_cast<float>( length() ) );
+		m_samples[i] = Oscillator::noiseSample();
 	}
 
 	emit samplesChanged( 0, length() - 1 );

@@ -449,7 +449,7 @@ void Lb302Synth::process(SampleFrame* outbuf, const f_cnt_t size)
 			// [-0.5, 0.5] : [-pi, pi]
 			case VcoShape::Sine: m_vcoK = 0.5f * Oscillator::sinSample(m_vcoC); break;
 			case VcoShape::Exponential: m_vcoK = 0.5f * Oscillator::expSample(m_vcoC); break;
-			case VcoShape::WhiteNoise: m_vcoK = 0.5f * Oscillator::noiseSample(m_vcoC); break;
+			case VcoShape::WhiteNoise: m_vcoK = 0.5f * Oscillator::noiseSample(); break;
 
 			// The next cases all use the BandLimitedWave class which uses the oscillator increment `m_vcoInc` to compute samples.
 			// If that oscillator increment is 0 we return a 0 sample because calling BandLimitedWave::pdToLen(0) leads to a
